@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ein königlicher Gruß für Mooaz</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse at 50% 30%, #3b1c6e, #12071f 70%);
+    color: #fff3c4; font-family: Georgia, "Times New Roman", serif;
+    display: grid; place-items: center;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .stage { position: relative; z-index: 2; text-align: center; padding: 20px; width: min(600px, 100%); }
+  .crown { font-size: clamp(4rem, 18vw, 6.5rem); display: block; opacity: 0; transform: translateY(-120vh) rotate(-20deg); }
+  .go .crown { animation: drop 1.4s cubic-bezier(.3, 1.4, .5, 1) .9s forwards, glow 2.5s ease-in-out 2.4s infinite; }
+  @keyframes drop { to { opacity: 1; transform: translateY(0) rotate(0); } }
+  @keyframes glow { 50% { filter: drop-shadow(0 0 22px #ffd54a); } }
+  .hail { margin: 6px 0 0; font-size: 1.15rem; letter-spacing: .08em; opacity: 0; }
+  .go .hail { animation: fade 1s ease 2.3s forwards; }
+  h1 {
+    margin: 4px 0 18px; font-size: clamp(3rem, 15vw, 5.4rem); line-height: 1.05; opacity: 0;
+    background: linear-gradient(90deg, #b8860b, #ffe27a, #b8860b, #ffe27a); background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .go h1 { animation: fade 1.2s ease 2.6s forwards, shimmer 4s linear 2.6s infinite; }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  @keyframes fade { to { opacity: 1; } }
+  .scroll {
+    background: #f4e3b4; color: #3a1d12; border: 3px solid #b8860b; border-radius: 12px;
+    padding: 20px 22px; min-height: 8.5em; text-align: left; font-size: 1.12rem; line-height: 1.6;
+    opacity: 0; transform: scaleY(.2); transform-origin: top;
+  }
+  .go .scroll { animation: unroll .9s ease 3.4s forwards; }
+  @keyframes unroll { to { opacity: 1; transform: scaleY(1); } }
+  .sign { margin-top: 14px; font-style: italic; opacity: 0; }
+  .sign.show { opacity: 1; transition: opacity 1s; }
+  /* curtains */
+  .curtain { position: fixed; top: 0; bottom: 0; width: 51%; z-index: 5; transition: transform 1.6s cubic-bezier(.6, 0, .3, 1);
+    background: repeating-linear-gradient(90deg, #7a0f1f 0 28px, #a31830 28px 56px, #6a0b19 56px 80px); }
+  .curtain.l { left: 0; border-right: 4px solid #d4a82c; }
+  .curtain.r { right: 0; border-left: 4px solid #d4a82c; }
+  .open .l { transform: translateX(-102%); }
+  .open .r { transform: translateX(102%); }
+  #start {
+    position: fixed; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font: inherit; font-size: 1.2rem; font-weight: bold; cursor: pointer; color: #3a1d12;
+    background: linear-gradient(#ffe27a, #d4a82c); border: 3px solid #fff3c4; border-radius: 999px;
+    padding: 16px 28px; animation: pulse 1.6s ease-in-out infinite;
+  }
+  #start:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  .open #start { display: none; }
+  @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.07); } }
+  @media (prefers-reduced-motion: reduce) {
+    .go .crown, .go .hail, .go h1, .go .scroll { animation: none; opacity: 1; transform: none; }
+    .curtain { transition: none; } #start { animation: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<main class="stage" id="stage">
+  <span class="crown" aria-hidden="true">👑</span>
+  <p class="hail">HÖRT, HÖRT!</p>
+  <h1 id="name"></h1>
+  <div class="scroll"><span id="text"></span><div class="sign" id="sign"></div></div>
+</main>
+<div class="curtain l"></div><div class="curtain r"></div>
+<button id="start">Das Tor öffnen</button>
+
+<script>
+/* ---- Hier kannst du Name, Absender und Text ändern ---- */
+const NAME = "Mooaz";
+const FROM = "Nasrin";
+const MESSAGE = "Hallo Mooaz! 😂 Pass auf! Spiel nicht zu viel Royal Kingdom, sonst wirst du noch König und wir müssen dich mit „Eure Majestät“ ansprechen! 👑🤣 Viel Erfolg beim Spielen und vergiss mich nicht.";
+/* ------------------------------------------------- */
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.getElementById("name").textContent = NAME;
+const cv = document.getElementById("fx"), ctx = cv.getContext("2d");
+let parts = [], running = false, timer;
+
+function size() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener("resize", size); size();
+
+function firework() {
+  const x = Math.random() * cv.width * .8 + cv.width * .1, y = Math.random() * cv.height * .4 + 40;
+  const cols = ["#ffd54a", "#ff6b81", "#7aa2ff", "#7dffb0", "#ffffff"];
+  const c = cols[Math.floor(Math.random() * cols.length)];
+  for (let i = 0; i < 46; i++) {
+    const a = Math.PI * 2 * i / 46, v = Math.random() * 4 + 1.5;
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, c });
+  }
+  if (!running) { running = true; requestAnimationFrame(frame); }
+}
+function frame() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach(p => {
+    p.vy += .05; p.x += p.vx; p.y += p.vy; p.life -= .014;
+    ctx.globalAlpha = Math.max(p.life, 0); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, 7); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  parts = parts.filter(p => p.life > 0);
+  if (parts.length) requestAnimationFrame(frame); else running = false;
+}
+function typeOut(el, txt, done) {
+  if (reduce) { el.textContent = txt; done(); return; }
+  const ch = Array.from(txt); let i = 0;
+  (function step() { el.textContent = ch.slice(0, ++i).join(""); if (i < ch.length) setTimeout(step, 40); else done(); })();
+}
+
+document.getElementById("start").addEventListener("click", () => {
+  document.body.classList.add("open");
+  document.getElementById("stage").classList.add("go");
+  const sign = document.getElementById("sign");
+  setTimeout(() => typeOut(document.getElementById("text"), MESSAGE, () => {
+    sign.textContent = "— " + FROM; sign.classList.add("show");
+  }), reduce ? 0 : 4300);
+  if (!reduce) { setTimeout(() => { firework(); timer = setInterval(firework, 1100); }, 2400); }
+});
+</script>
+</body>
+</html>
